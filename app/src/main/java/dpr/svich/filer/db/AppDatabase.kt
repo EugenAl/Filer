@@ -6,7 +6,7 @@ import androidx.room.Room
 import androidx.room.RoomDatabase
 import dpr.svich.filer.model.FileHash
 
-@Database(entities = [FileHash::class], version = 1)
+@Database(entities = [FileHash::class], version = 1, exportSchema = false)
 abstract class AppDatabase: RoomDatabase() {
 
     abstract fun fileHashDao(): FileHashDAO

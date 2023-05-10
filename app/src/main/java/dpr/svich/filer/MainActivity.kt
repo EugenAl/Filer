@@ -5,13 +5,21 @@ import android.os.Bundle
 import android.os.Environment
 import android.util.Log
 import android.widget.TextView
+import androidx.lifecycle.Observer
 import androidx.recyclerview.widget.LinearLayoutManager
 import androidx.recyclerview.widget.RecyclerView
 import androidx.work.OneTimeWorkRequest
+import androidx.work.WorkInfo
 import androidx.work.WorkManager
+import dpr.svich.filer.db.AppDatabase
 import dpr.svich.filer.list.ListFileAdapter
 import dpr.svich.filer.model.FileWrapper
+import kotlinx.coroutines.Dispatchers
+import kotlinx.coroutines.GlobalScope
+import kotlinx.coroutines.launch
+import kotlinx.coroutines.withContext
 import java.io.File
+import java.lang.Exception
 
 class MainActivity : AppCompatActivity() {
 
@@ -47,12 +55,16 @@ class MainActivity : AppCompatActivity() {
     }
 
     override fun onBackPressed() {
-        if(currentFile != null && currentFile?.parentFile != null){
-            Log.d("MainActivity", currentFile!!.absolutePath)
-            adapter!!.data(sortFiles(currentFile?.parentFile?.listFiles()!!))
-            currentFile = currentFile?.parentFile
-            folderName.text = currentFile?.name
-        } else{
+        try{
+            if(currentFile != null && currentFile?.parentFile != null){
+                Log.d("MainActivity", currentFile!!.absolutePath)
+                adapter!!.data(sortFiles(currentFile?.parentFile?.listFiles()!!))
+                currentFile = currentFile?.parentFile
+                folderName.text = currentFile?.name
+            } else{
+                super.onBackPressed()
+            }
+        } catch (e: Exception){
             super.onBackPressed()
         }
     }
@@ -66,7 +78,28 @@ class MainActivity : AppCompatActivity() {
     }
 
     private fun cacheFiles(){
-        val worker = OneTimeWorkRequest.Builder(FilesWorker::class.java)
-        WorkManager.getInstance(this).enqueue(worker.build())
+        val worker = OneTimeWorkRequest.Builder(FilesWorker::class.java).build()
+        WorkManager.getInstance(this).enqueue(worker)
+        WorkManager.getInstance(this).getWorkInfoByIdLiveData(worker.id)
+            .observe(this, Observer { workInfo ->
+                if(workInfo != null && workInfo.state == WorkInfo.State.SUCCEEDED){
+                    val job = GlobalScope.launch {
+                        val saved = AppDatabase.getInstance(applicationContext)
+                            .fileHashDao().getAll()
+                        val files = sortFiles(File(path).listFiles()!!)
+                        for(file in saved){
+                            files.find { it.file.name ==  file.name}?.let {
+                                if(it.hashCode() == file.hash){
+                                    it.changed = true
+                                    Log.d("MainActivity", it.file.toString())
+                                }
+                            }
+                        }
+                        withContext(Dispatchers.Main){
+                            adapter!!.data(files)
+                        }
+                    }
+                }
+            })
     }
 }
