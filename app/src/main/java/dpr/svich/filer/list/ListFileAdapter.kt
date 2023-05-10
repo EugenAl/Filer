@@ -1,5 +1,6 @@
 package dpr.svich.filer.list
 
+import android.opengl.Visibility
 import android.view.LayoutInflater
 import android.view.View
 import android.view.ViewGroup
@@ -20,11 +21,13 @@ class ListFileAdapter(private var dataSet: List<FileWrapper>) :
         val fileName: TextView
         val fileAttr: TextView
         val fileIcon: ImageView
+        val fileIsChanged: TextView
 
         init {
             fileName = view.findViewById(R.id.fileNameTextView)
             fileAttr = view.findViewById(R.id.fileAttrTextView)
             fileIcon = view.findViewById(R.id.fileIcoImageView)
+            fileIsChanged = view.findViewById(R.id.textView)
             view.setOnClickListener {
                 onItemClick?.invoke(dataSet[adapterPosition])
             }
@@ -41,6 +44,8 @@ class ListFileAdapter(private var dataSet: List<FileWrapper>) :
     override fun onBindViewHolder(holder: ViewHolder, position: Int) {
         val file = dataSet[position].file
         val attr = Files.readAttributes(file.toPath(), BasicFileAttributes::class.java)
+        holder.fileIsChanged.visibility =
+            if (dataSet[position].changed) View.VISIBLE else View.INVISIBLE
         holder.fileName.text = file.name
         holder.fileAttr.text = buildString {
             if (!file.isDirectory) {

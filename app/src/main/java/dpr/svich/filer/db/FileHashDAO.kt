@@ -13,4 +13,6 @@ interface FileHashDAO {
     fun insertAll(vararg files: FileHash)
     @Insert
     fun insert(fileHash: FileHash)
+    @Query("DELETE FROM hash")
+    fun nukeTable()
 }

@@ -20,6 +20,7 @@ import kotlinx.coroutines.launch
 import kotlinx.coroutines.withContext
 import java.io.File
 import java.lang.Exception
+import java.nio.file.Files
 
 class MainActivity : AppCompatActivity() {
 
@@ -52,6 +53,13 @@ class MainActivity : AppCompatActivity() {
                 }
             }
         }
+    }
+
+    override fun onDestroy() {
+        val worker = OneTimeWorkRequest.Builder(FilesWorker::class.java).build()
+        WorkManager.getInstance(this).enqueue(worker)
+        Log.d("MainActivity", "onDestroy")
+        super.onDestroy()
     }
 
     override fun onBackPressed() {
@@ -89,15 +97,20 @@ class MainActivity : AppCompatActivity() {
                         val files = sortFiles(File(path).listFiles()!!)
                         for(file in saved){
                             files.find { it.file.name ==  file.name}?.let {
-                                if(it.hashCode() == file.hash){
+                                val hash = withContext(Dispatchers.IO) {
+                                    Files.readAllBytes(it.file.toPath()).contentHashCode()
+                                }
+                                if(file.hash != hash){
                                     it.changed = true
-                                    Log.d("MainActivity", it.file.toString())
+                                    Log.d("MainActivity", it.file.name.toString())
                                 }
                             }
                         }
                         withContext(Dispatchers.Main){
                             adapter!!.data(files)
                         }
+                        AppDatabase.getInstance(applicationContext)
+                            .fileHashDao().nukeTable()
                     }
                 }
             })
