@@ -14,22 +14,20 @@ import java.util.Arrays
 
 class MainActivity : AppCompatActivity() {
 
-    var adapter: ListFileAdapter? = null
-    val path = Environment.getExternalStorageDirectory().toString()
-    var currentFile: File? = null
-    lateinit var folderName: TextView
+    private var adapter: ListFileAdapter? = null
+    private val path = Environment.getExternalStorageDirectory().toString()
+    private var currentFile: File? = null
+    private lateinit var folderName: TextView
 
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
         setContentView(R.layout.activity_main)
 
-        val files = File(path).listFiles() as Array<File>
-
         val recyclerView = findViewById<RecyclerView>(R.id.filesRecyclerView)
         folderName = findViewById(R.id.folderTextView)
         folderName.text = "Root"
 
-        adapter = ListFileAdapter(files.map { FileWrapper(file = it) })
+        adapter = ListFileAdapter(sortFiles(File(path).listFiles()!!))
         adapter?.let {
             recyclerView.adapter = adapter
             recyclerView.layoutManager = LinearLayoutManager(this)
@@ -38,10 +36,8 @@ class MainActivity : AppCompatActivity() {
                     Log.d("MainActivity", item.file.absolutePath)
                     currentFile = item.file
                     folderName.text = currentFile?.name
-                    val list = item.file.listFiles()
-                    list.sortBy { file -> file.name }
-                    //list.sortBy { file -> file.isDirectory }
-                    adapter!!.data(list?.map { FileWrapper(it) }!!)
+                    adapter!!.data(sortFiles(item.file.listFiles()!!))
+                    recyclerView.scrollToPosition(0)
                 }
             }
         }
@@ -50,14 +46,19 @@ class MainActivity : AppCompatActivity() {
     override fun onBackPressed() {
         if(currentFile != null && currentFile?.parentFile != null){
             Log.d("MainActivity", currentFile!!.absolutePath)
-            val list = currentFile?.parentFile?.listFiles()!!
-            list.sortBy { file -> file.name }
-            list.sortBy { file -> file.isDirectory }
-            adapter!!.data(list.map { FileWrapper(it) })
+            adapter!!.data(sortFiles(currentFile?.parentFile?.listFiles()!!))
             currentFile = currentFile?.parentFile
             folderName.text = currentFile?.name
         } else{
             super.onBackPressed()
         }
+    }
+
+    private fun sortFiles(files: Array<File>) : List<FileWrapper>{
+        val dirs = files.filter { it.isDirectory }
+        val other = files.filterNot { it.isDirectory }
+
+        return (dirs.sortedBy { it.name.lowercase() }+other.sortedBy { it.name.lowercase() })
+            .map { FileWrapper(it) }
     }
 }
