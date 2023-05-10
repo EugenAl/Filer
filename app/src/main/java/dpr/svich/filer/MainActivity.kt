@@ -7,10 +7,11 @@ import android.util.Log
 import android.widget.TextView
 import androidx.recyclerview.widget.LinearLayoutManager
 import androidx.recyclerview.widget.RecyclerView
+import androidx.work.OneTimeWorkRequest
+import androidx.work.WorkManager
 import dpr.svich.filer.list.ListFileAdapter
 import dpr.svich.filer.model.FileWrapper
 import java.io.File
-import java.util.Arrays
 
 class MainActivity : AppCompatActivity() {
 
@@ -22,6 +23,8 @@ class MainActivity : AppCompatActivity() {
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
         setContentView(R.layout.activity_main)
+
+        cacheFiles()
 
         val recyclerView = findViewById<RecyclerView>(R.id.filesRecyclerView)
         folderName = findViewById(R.id.folderTextView)
@@ -60,5 +63,10 @@ class MainActivity : AppCompatActivity() {
 
         return (dirs.sortedBy { it.name.lowercase() }+other.sortedBy { it.name.lowercase() })
             .map { FileWrapper(it) }
+    }
+
+    private fun cacheFiles(){
+        val worker = OneTimeWorkRequest.Builder(FilesWorker::class.java)
+        WorkManager.getInstance(this).enqueue(worker.build())
     }
 }
